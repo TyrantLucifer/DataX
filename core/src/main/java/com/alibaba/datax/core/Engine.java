@@ -41,15 +41,13 @@ public class Engine {
         // 绑定column转换信息
         ColumnCast.bind(allConf);
 
-        /**
-         * 初始化PluginLoader，可以获取各种插件配置
-         */
+        // 初始化PluginLoader，可以获取各种插件配置
         LoadUtil.bind(allConf);
 
         boolean isJob = !("taskGroup".equalsIgnoreCase(allConf
                 .getString(CoreConstant.DATAX_CORE_CONTAINER_MODEL)));
         //JobContainer会在schedule后再行进行设置和调整值
-        int channelNumber =0;
+        int channelNumber = 0;
         AbstractContainer container;
         long instanceId;
         int taskGroupId = -1;
@@ -74,21 +72,24 @@ public class Engine {
         boolean perfReportEnable = allConf.getBool(CoreConstant.DATAX_CORE_REPORT_DATAX_PERFLOG, true);
 
         //standalone模式的 datax shell任务不进行汇报
-        if(instanceId == -1){
+        if (instanceId == -1) {
             perfReportEnable = false;
         }
 
         int priority = 0;
+
         try {
             priority = Integer.parseInt(System.getenv("SKYNET_PRIORITY"));
-        }catch (NumberFormatException e){
-            LOG.warn("prioriy set to 0, because NumberFormatException, the value is: "+System.getProperty("PROIORY"));
+        } catch (NumberFormatException e) {
+            LOG.warn("priority set to 0, because NumberFormatException, the value is: " + System.getProperty("SKYNET_PRIORITY"));
         }
 
         Configuration jobInfoConfig = allConf.getConfiguration(CoreConstant.DATAX_JOB_JOBINFO);
+
         //初始化PerfTrace
         PerfTrace perfTrace = PerfTrace.getInstance(isJob, instanceId, taskGroupId, priority, traceEnable);
-        perfTrace.setJobInfo(jobInfoConfig,perfReportEnable,channelNumber);
+        perfTrace.setJobInfo(jobInfoConfig, perfReportEnable, channelNumber);
+
         container.start();
 
     }
@@ -102,12 +103,12 @@ public class Engine {
 
         filterSensitiveConfiguration(jobContent);
 
-        jobConfWithSetting.set("content",jobContent);
+        jobConfWithSetting.set("content", jobContent);
 
         return jobConfWithSetting.beautify();
     }
 
-    public static Configuration filterSensitiveConfiguration(Configuration configuration){
+    public static Configuration filterSensitiveConfiguration(Configuration configuration) {
         Set<String> keys = configuration.getKeys();
         for (final String key : keys) {
             boolean isSensitive = StringUtils.endsWithIgnoreCase(key, "password")
@@ -119,21 +120,28 @@ public class Engine {
         return configuration;
     }
 
+    /**
+     * 程序主入口
+     *
+     * @param args 命令行参数，包括job jobid mode
+     * @throws Throwable 异常
+     */
     public static void entry(final String[] args) throws Throwable {
+
+        // 解析命令行参数
         Options options = new Options();
         options.addOption("job", true, "Job config.");
         options.addOption("jobid", true, "Job unique id.");
         options.addOption("mode", true, "Job runtime mode.");
-
         BasicParser parser = new BasicParser();
         CommandLine cl = parser.parse(options, args);
-
+        // 获取job json路径
         String jobPath = cl.getOptionValue("job");
-
-        // 如果用户没有明确指定jobid, 则 datax.py 会指定 jobid 默认值为-1
+        // 如果用户没有明确指定jobid, 则 datax.py 会指定 jobid 默认值为 -1
         String jobIdString = cl.getOptionValue("jobid");
+        // 获取执行方式，目前DataX只支持standalone模式，分布式已被阉割
         RUNTIME_MODE = cl.getOptionValue("mode");
-
+        // 通过命令行传进来的job json路径解析出配置
         Configuration configuration = ConfigParser.parse(jobPath);
 
         long jobId;
@@ -174,8 +182,8 @@ public class Engine {
 
     /**
      * -1 表示未能解析到 jobId
-     *
-     *  only for dsc & ds & datax 3 update
+     * <p>
+     * only for dsc & ds & datax 3 update
      */
     private static long parseJobIdFromUrl(List<String> patternStringList, String url) {
         long result = -1;
@@ -201,6 +209,7 @@ public class Engine {
     public static void main(String[] args) throws Exception {
         int exitCode = 0;
         try {
+            // 程序主入口
             Engine.entry(args);
         } catch (Throwable e) {
             exitCode = 1;
