@@ -110,9 +110,8 @@ public final class JobAssignUtil {
 
 
     /**
-     * /**
-     * 需要实现的效果通过例子来说是：
      * <pre>
+     * 需要实现的效果通过例子来说是：
      * a 库上有表：0, 1, 2
      * a 库上有表：3, 4
      * c 库上有表：5, 6, 7
@@ -123,17 +122,25 @@ public final class JobAssignUtil {
      * taskGroup-1: 3,  6,
      * taskGroup-2: 5,  2,
      * taskGroup-3: 1,  7
-     *
      * </pre>
+     * @param resourceMarkAndTaskIdMap 对所有任务进行编号的map
+     * @param jobConfiguration job的配置
+     * @param taskGroupNumber 一共需要的taskGroup的数量
+     * @return taskGroup的配置
      */
     private static List<Configuration> doAssign(LinkedHashMap<String, List<Integer>> resourceMarkAndTaskIdMap, Configuration jobConfiguration, int taskGroupNumber) {
+
+        // 获取job配置
         List<Configuration> contentConfig = jobConfiguration.getListConfiguration(CoreConstant.DATAX_JOB_CONTENT);
 
+        // 初始化一份taskGroup配置
         Configuration taskGroupTemplate = jobConfiguration.clone();
+
+        // 将配置中的content配置项去掉
         taskGroupTemplate.remove(CoreConstant.DATAX_JOB_CONTENT);
 
+        // 初始化taskGroup配置
         List<Configuration> result = new LinkedList<Configuration>();
-
         List<List<Configuration>> taskGroupConfigList = new ArrayList<List<Configuration>>(taskGroupNumber);
         for (int i = 0; i < taskGroupNumber; i++) {
             taskGroupConfigList.add(new LinkedList<Configuration>());
@@ -141,6 +148,7 @@ public final class JobAssignUtil {
 
         int mapValueMaxLength = -1;
 
+        // 获取任务编号
         List<String> resourceMarks = new ArrayList<String>();
         for (Map.Entry<String, List<Integer>> entry : resourceMarkAndTaskIdMap.entrySet()) {
             resourceMarks.add(entry.getKey());
@@ -149,6 +157,7 @@ public final class JobAssignUtil {
             }
         }
 
+        // 核心Round Robin分配逻辑
         int taskGroupIndex = 0;
         for (int i = 0; i < mapValueMaxLength; i++) {
             for (String resourceMark : resourceMarks) {

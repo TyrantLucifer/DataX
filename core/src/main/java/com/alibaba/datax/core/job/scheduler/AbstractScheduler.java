@@ -46,12 +46,12 @@ public abstract class AbstractScheduler {
 
         errorLimit = new ErrorRecordChecker(configurations.get(0));
 
-        /**
-         * 给 taskGroupContainer 的 Communication 注册
-         */
+        // 给 taskGroupContainer 的 Communication 注册
         this.containerCommunicator.registerCommunication(configurations);
 
         int totalTasks = calculateTaskCount(configurations);
+
+        // 启动所有的taskGroups
         startAllTaskGroup(configurations);
 
         Communication lastJobContainerCommunication = new Communication();

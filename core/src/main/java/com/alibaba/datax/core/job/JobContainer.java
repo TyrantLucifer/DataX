@@ -490,37 +490,41 @@ public class JobContainer extends AbstractContainer {
      * 同时不同的执行模式调用不同的调度策略，将所有任务调度起来
      */
     private void schedule() {
-        /**
-         * 这里的全局speed和每个channel的速度设置为B/s
-         */
+        // 获取每个taskGroup中要执行的任务个数，由配置中的core.container.taskGroup.channel控制，默认为5
         int channelsPerTaskGroup = this.configuration.getInt(
                 CoreConstant.DATAX_CORE_CONTAINER_TASKGROUP_CHANNEL, 5);
+        // 获取本次任务的总共任务数量
         int taskNumber = this.configuration.getList(
                 CoreConstant.DATAX_JOB_CONTENT).size();
-
+        // 在这里将配置的并发数和实际的任务数量取最小值，防止配置并发数 > 任务的分片数量
         this.needChannelNumber = Math.min(this.needChannelNumber, taskNumber);
+        // 在性能追踪对象中设置最后的并发度
         PerfTrace.getInstance().setChannelNumber(needChannelNumber);
 
-        /**
-         * 通过获取配置信息得到每个taskGroup需要运行哪些tasks任务
-         */
-
+        // 通过配置信息和划分出的channel数量，分配每个组应该执行的任务
         List<Configuration> taskGroupConfigs = JobAssignUtil.assignFairly(this.configuration,
                 this.needChannelNumber, channelsPerTaskGroup);
 
         LOG.info("Scheduler starts [{}] taskGroups.", taskGroupConfigs.size());
 
+        // 初始化运行模式
         ExecuteMode executeMode = null;
+
+        // 初始化调度器
         AbstractScheduler scheduler;
         try {
+            // 在这里可以看到，DataX官方写死了运行模式，只支持STANDALONE模式，不支持分布式
         	executeMode = ExecuteMode.STANDALONE;
+
+            // 初始化调度器
             scheduler = initStandaloneScheduler(this.configuration);
 
-            //设置 executeMode
+            // 设置运行模式
             for (Configuration taskGroupConfig : taskGroupConfigs) {
                 taskGroupConfig.set(CoreConstant.DATAX_CORE_CONTAINER_JOB_MODE, executeMode.getValue());
             }
 
+            // 看到这里我彻底笑了 ^_^ ^_^ ^_^
             if (executeMode == ExecuteMode.LOCAL || executeMode == ExecuteMode.DISTRIBUTE) {
                 if (this.jobId <= 0) {
                     throw DataXException.asDataXException(FrameworkErrorCode.RUNTIME_ERROR,
@@ -530,10 +534,13 @@ public class JobContainer extends AbstractContainer {
 
             LOG.info("Running by {} Mode.", executeMode);
 
+            // 记录任务开始时间
             this.startTransferTimeStamp = System.currentTimeMillis();
 
+            // 开始调度
             scheduler.schedule(taskGroupConfigs);
 
+            // 记录任务结束时间
             this.endTransferTimeStamp = System.currentTimeMillis();
         } catch (Exception e) {
             LOG.error("运行scheduler 模式[{}]出错.", executeMode);
@@ -542,9 +549,7 @@ public class JobContainer extends AbstractContainer {
                     FrameworkErrorCode.RUNTIME_ERROR, e);
         }
 
-        /**
-         * 检查任务执行情况
-         */
+        // 检查任务执行情况
         this.checkLimit();
     }
 
